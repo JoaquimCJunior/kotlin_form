@@ -4,7 +4,7 @@ Um simples framework em Kotlin que gera um formulário HTML e conexão com MySQL
 
 ## Como configurar a conexão
 - Crie sua conexão no banco de dados 
-- No arquivo `main.kt` Altere a linha abaixo com o nome da sua conexão com o banco de dados, a porta , usuário e senha
+- No arquivo `mySQL.kt` Altere a linha abaixo com o nome da sua conexão com o banco de dados, a porta , usuário e senha
 
 `val conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/kotlin_form","root", "root")`
 
