@@ -1,0 +1,108 @@
+import org.http4k.core.Request
+import org.http4k.core.Response
+import org.http4k.core.Status
+import org.http4k.server.SunHttp
+import org.http4k.server.asServer
+import org.http4k.core.*
+import org.http4k.routing.bind
+import org.http4k.routing.routes
+import java.sql.DriverManager
+import java.net.URLDecoder
+
+object HelloWorldHandler : HttpHandler {
+    override fun invoke(request: Request): Response =
+        Response(Status.OK).body("${createHtml()}")
+}
+
+fun createTitle(text: String): String {
+    return "<h1>${text}</h1>"
+}
+
+fun createButton(title: String, type: String = "button"): String {
+    return """<button type=\"$type\">$title</button><br><br>"""
+}
+
+fun createInput(label: String, id: String, name: String, type: String = "text"): String {
+    return """
+        <label for="${id}">${label}:</label>
+        <input type="${type}" id="${id}" name="${name}"><br><br>
+    """
+}
+
+fun createCheckbox(label: String, id: String, name: String, checked: Boolean = false): String {
+    val checkedAttr = if (checked) "checked" else ""
+    return """
+        <input type="checkbox" id="$id" name="$name" $checkedAttr>
+        <label for="$id">$label</label><br><br>
+    """
+}
+
+data class Option(val value: String, val label: String)
+
+fun createDropdown(label: String, id: String, name: String, options: List<Option>): String {
+    val optionTags = options.joinToString("") { option ->
+        "<option value=\"${option.value}\">${option.label}</option>"
+    }
+    return """
+        <label for="$id">$label</label>
+        <select id="$id" name="$name">$optionTags</select><br><br>
+    """
+}
+
+fun creatForm(action: String, method: String = "post"): String{
+    return """
+        <form action="$action" method="$method">
+            ${createInput("Nome", "name", "name")}
+            ${createInput("Email", "email", "email")}
+            ${createInput("Idade", "idade", "idade", "number")}
+            ${createButton("Concluir")}
+        </form>
+    """
+}
+
+fun createHtml(): String {
+
+    return """
+        <!DOCTYPE html>
+        <html>
+            <head>
+                ${createTitle("Cadastro de Usuário")}
+            </head>
+            <body style="text-align: center">
+                ${creatForm("submit")}
+            </body>
+        </html>
+
+    """.trimIndent()
+}
+
+fun main() {
+    val app: HttpHandler = routes(
+        "/formulario" bind Method.GET to HelloWorldHandler,
+        "/submit" bind Method.POST to { request: Request ->
+            val formData = request.bodyString() // obter os dados do formulário
+            val params = formData.split("&").map { it.split("=") }.associate { it[0] to it[1] } // converter os dados em um mapa de parâmetros
+
+            // salvar os dados no banco de dados
+            val conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/kotlin_form",
+                "Junior", "Junior1234")
+
+            val stmt = conn.createStatement()
+
+            // criar a tabela pessoa caso ela não exista
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS usuarios (" +
+                    "id INT NOT NULL AUTO_INCREMENT, " +
+                    "nome VARCHAR(50) NOT NULL, " +
+                    "email VARCHAR(50) NOT NULL, " +
+                    "idade INT NOT NULL, PRIMARY KEY (id))")
+
+            // inserir os dados na tabela pessoa
+            stmt.executeUpdate("INSERT INTO usuarios (nome, email, idade) " +
+                    "VALUES ('${URLDecoder.decode(params["name"], "UTF-8")}', '${URLDecoder.decode(params["email"], "UTF-8")}', ${params["idade"]})")
+
+            Response(Status.SEE_OTHER).header("Location", "/formulario").body("")
+        }
+    )
+
+    app.asServer(SunHttp(8080)).start()
+}
