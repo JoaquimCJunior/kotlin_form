@@ -9,14 +9,7 @@ import org.http4k.routing.routes
 import java.sql.DriverManager
 import java.net.URLDecoder
 
-class Entrada() {
-    val nome = Frase("text",255, "Nome")
-    val idade = NumeroInteiro("Idade")
-    val email = Frase("email",255, "E-mail")
-    val botao = Botao("Concluir")
-}
-
-object FormHandler : HttpHandler {
+object HelloWorldHandler : HttpHandler {
     override fun invoke(request: Request): Response =
         Response(Status.OK).body("${createHtml()}")
 }
@@ -25,23 +18,59 @@ fun createTitle(text: String): String {
     return "<h1>${text}</h1>"
 }
 
+fun createButton(title: String, type: String = "button"): String {
+    return """<button type=\"$type\">$title</button><br><br>"""
+}
+
+fun createInput(label: String, id: String, name: String, type: String = "text"): String {
+    return """
+        <label for="${id}">${label}:</label>
+        <input type="${type}" id="${id}" name="${name}"><br><br>
+    """
+}
+
+fun createCheckbox(label: String, id: String, name: String, checked: Boolean = false): String {
+    val checkedAttr = if (checked) "checked" else ""
+    return """
+        <input type="checkbox" id="$id" name="$name" $checkedAttr>
+        <label for="$id">$label</label><br><br>
+    """
+}
+
+data class Option(val value: String, val label: String)
+
+fun createDropdown(label: String, id: String, name: String, options: List<Option>): String {
+    val optionTags = options.joinToString("") { option ->
+        "<option value=\"${option.value}\">${option.label}</option>"
+    }
+    return """
+        <label for="$id">$label</label>
+        <select id="$id" name="$name">$optionTags</select><br><br>
+    """
+}
+
 fun creatForm(action: String, method: String = "post"): String{
-    val input = Entrada()
-    val form = GerarFormulario(input)
     return """
         <form action="$action" method="$method">
-            ${form.reflectionClass()}
+            ${createInput("Nome", "name", "name")}
+            ${createInput("Email", "email", "email", "email")}
+            ${createInput("Idade", "idade", "idade", "number")}
+            ${createButton("Concluir")}
         </form>
     """
 }
 
 fun createHtml(): String {
+
     return """
         <!DOCTYPE html>
         <html>
             <meta charset="utf-8">
+            <head>
+                ${createTitle("Cadastro de Usuário")}
+            </head>
             <body style="text-align: center">
-                ${creatForm("submit")}          
+                ${creatForm("submit")}
             </body>
         </html>
 
@@ -49,9 +78,8 @@ fun createHtml(): String {
 }
 
 fun main() {
-
     val app: HttpHandler = routes(
-        "/formulario" bind Method.GET to FormHandler,
+        "/formulario" bind Method.GET to HelloWorldHandler,
         "/submit" bind Method.POST to { request: Request ->
             val formData = request.bodyString() // obter os dados do formulário
             val params = formData.split("&").map { it.split("=") }.associate { it[0] to it[1] } // converter os dados em um mapa de parâmetros
@@ -71,7 +99,7 @@ fun main() {
 
             // inserir os dados na tabela pessoa
             stmt.executeUpdate("INSERT INTO usuarios (nome, email, idade) " +
-                    "VALUES ('${URLDecoder.decode(params["nome"], "UTF-8")}', '${URLDecoder.decode(params["email"], "UTF-8")}', ${params["idade"]})")
+                    "VALUES ('${URLDecoder.decode(params["name"], "UTF-8")}', '${URLDecoder.decode(params["email"], "UTF-8")}', ${params["idade"]})")
 
             Response(Status.SEE_OTHER).header("Location", "/formulario").body("")
         }
