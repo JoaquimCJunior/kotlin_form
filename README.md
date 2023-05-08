@@ -19,3 +19,6 @@ Os tipos de dados suportados e os respectivos campos nos formulário gerados sã
  
 Agora execute o programa e acesse o servidor local em sua máquina *http://localhost:8080/formulario*
 
+Alan Lima
+Joaquim
+Jonathan
